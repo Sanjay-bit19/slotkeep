@@ -1,0 +1,311 @@
+// SlotKeep data model.
+// Conventions:
+//   - Every tenant-owned table has a non-null `tenantId` and is only accessed through the
+//     tenant-scoped client in src/tenant.ts.
+//   - All instants are `timestamptz` and hold UTC. Wall-clock schedule data (weekly hours) is
+//     stored as minutes-after-local-midnight and interpreted in Tenant.timezone.
+//   - All money is integer cents.
+//   - Constraints Prisma cannot express (exclusion constraint, check constraints) live in
+//     hand-written SQL inside the migrations and are documented in docs/adr.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  NONE
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  UNPAID
+}
+
+// ---------- Auth.js ----------
+
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String       @unique
+  emailVerified DateTime?    @db.Timestamptz(3)
+  image         String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @updatedAt @db.Timestamptz(3)
+  accounts      Account[]
+  sessions      Session[]
+  memberships   Membership[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime @db.Timestamptz(3)
+
+  @@unique([identifier, token])
+}
+
+// ---------- Tenancy ----------
+
+model Tenant {
+  id                      String             @id @default(cuid())
+  name                    String
+  slug                    String             @unique
+  timezone                String
+  brandColor              String             @default("#4f46e5")
+  cancellationWindowHours Int                @default(24)
+  plan                    Plan               @default(FREE)
+  subscriptionStatus      SubscriptionStatus @default(NONE)
+  stripeCustomerId        String?            @unique
+  stripeSubscriptionId    String?            @unique
+  currentPeriodEnd        DateTime?          @db.Timestamptz(3)
+  /// `created` time of the newest Stripe subscription event applied. Stripe does not guarantee
+  /// delivery order, so older events arriving late are ignored.
+  billingEventAt          DateTime?          @db.Timestamptz(3)
+  createdAt               DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime           @updatedAt @db.Timestamptz(3)
+
+  memberships  Membership[]
+  staff        StaffMember[]
+  services     Service[]
+  bookings     Booking[]
+  customers    Customer[]
+  availability WeeklyAvailability[]
+  timeOff      TimeOff[]
+  staffService StaffService[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      Role
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+}
+
+// ---------- Catalog ----------
+
+model StaffMember {
+  id           String               @id @default(cuid())
+  tenantId     String
+  name         String
+  email        String?
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  availability WeeklyAvailability[]
+  timeOff      TimeOff[]
+  services     StaffService[]
+  bookings     Booking[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId])
+}
+
+/// Recurring weekly hours in the tenant's local wall-clock time.
+model WeeklyAvailability {
+  id          String      @id @default(cuid())
+  tenantId    String
+  staffId     String
+  /// ISO weekday 1 (Mon) .. 7 (Sun)
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff       StaffMember @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, staffId])
+}
+
+model TimeOff {
+  id        String      @id @default(cuid())
+  tenantId  String
+  staffId   String
+  startAt   DateTime    @db.Timestamptz(3)
+  endAt     DateTime    @db.Timestamptz(3)
+  reason    String?
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff     StaffMember @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, staffId, startAt])
+}
+
+model Service {
+  id           String         @id @default(cuid())
+  tenantId     String
+  name         String
+  description  String         @default("")
+  durationMin  Int
+  bufferMin    Int            @default(0)
+  priceCents   Int
+  depositCents Int
+  currency     String         @default("usd")
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime       @updatedAt @db.Timestamptz(3)
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff        StaffService[]
+  bookings     Booking[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId])
+}
+
+model StaffService {
+  tenantId  String
+  staffId   String
+  serviceId String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff     StaffMember @relation(fields: [tenantId, staffId], references: [tenantId, id], onDelete: Cascade)
+  service   Service     @relation(fields: [tenantId, serviceId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([staffId, serviceId])
+  @@index([tenantId, serviceId])
+}
+
+// ---------- Bookings ----------
+
+model Customer {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  email     String
+  phone     String?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings  Booking[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, id])
+}
+
+model Booking {
+  id                      String        @id @default(cuid())
+  tenantId                String
+  serviceId               String
+  staffId                 String
+  customerId              String
+  startAt                 DateTime      @db.Timestamptz(3)
+  /// End of the service itself.
+  endAt                   DateTime      @db.Timestamptz(3)
+  /// endAt + service buffer. The exclusion constraint covers [startAt, blockedUntil).
+  blockedUntil            DateTime      @db.Timestamptz(3)
+  status                  BookingStatus
+  /// Snapshots at booking time, so later price edits don't rewrite history.
+  priceCents              Int
+  depositCents            Int
+  currency                String        @default("usd")
+  depositPaidCents        Int           @default(0)
+  refundedCents           Int           @default(0)
+  holdExpiresAt           DateTime?     @db.Timestamptz(3)
+  stripeCheckoutSessionId String?       @unique
+  stripePaymentIntentId   String?
+  stripeRefundId          String?
+  confirmedAt             DateTime?     @db.Timestamptz(3)
+  cancelledAt             DateTime?     @db.Timestamptz(3)
+  cancelReason            String?
+  /// Bumped on reschedule/cancel to revoke previously emailed self-service links.
+  tokenVersion            Int           @default(1)
+  notes                   String        @default("")
+  createdAt               DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime      @updatedAt @db.Timestamptz(3)
+  tenant                  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service                 Service       @relation(fields: [tenantId, serviceId], references: [tenantId, id])
+  staff                   StaffMember   @relation(fields: [tenantId, staffId], references: [tenantId, id])
+  customer                Customer      @relation(fields: [tenantId, customerId], references: [tenantId, id])
+
+  @@index([tenantId, startAt])
+  @@index([tenantId, status, startAt])
+  @@index([staffId, startAt])
+  @@index([tenantId, createdAt])
+}
+
+// ---------- Infrastructure ----------
+
+/// Stripe event ids already applied. Inserted in the same transaction as the event's effects,
+/// so a redelivered event is a no-op.
+model ProcessedWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  tenantId   String?
+  bookingId  String?
+  to         String
+  subject    String
+  template   String
+  /// Dedupe key; e.g. "reminder:<bookingId>:<startAt>" so a retried job never double-sends.
+  dedupeKey  String?  @unique
+  status     String
+  providerId String?
+  /// Only populated outside production (dev mailbox / e2e tests read it).
+  body       String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([to, createdAt])
+  @@index([tenantId, createdAt])
+}

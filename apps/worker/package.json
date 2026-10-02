@@ -1,0 +1,29 @@
+{
+  "name": "@slotkeep/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "SERVICE_NAME=worker tsx watch --env-file=../../.env src/index.ts",
+    "build": "tsup",
+    "start": "SERVICE_NAME=worker node --enable-source-maps dist/index.js",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "@sentry/node": "^11.2.0",
+    "@slotkeep/core": "workspace:*",
+    "@slotkeep/db": "workspace:*",
+    "@slotkeep/infra": "workspace:*",
+    "bullmq": "^6.3.11",
+    "ioredis": "^6.0.0",
+    "luxon": "^3.7.2",
+    "pino": "^10.3.1",
+    "stripe": "^23.0.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "tsx": "^4.23.15"
+  }
+}
