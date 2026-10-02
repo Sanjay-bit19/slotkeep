@@ -59,7 +59,11 @@ export function verifyManageToken(token: string, secret: string, now: Date): Ver
   } catch {
     return { ok: false, reason: "MALFORMED" };
   }
-  if (typeof payload?.b !== "string" || typeof payload.v !== "number" || typeof payload.e !== "number") {
+  if (
+    typeof payload?.b !== "string" ||
+    typeof payload.v !== "number" ||
+    typeof payload.e !== "number"
+  ) {
     return { ok: false, reason: "MALFORMED" };
   }
   if (payload.e * 1000 <= now.getTime()) return { ok: false, reason: "EXPIRED" };

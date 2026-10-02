@@ -35,13 +35,15 @@ export interface TenantFixture {
  * A tenant with one 60-minute service ($50, $10 deposit, 15 min buffer) and `staffCount` staff
  * members who work 09:00-17:00 local every day and can perform the service.
  */
-export async function createTenantFixture(opts: {
-  plan?: "FREE" | "PRO";
-  staffCount?: number;
-  timezone?: string;
-  depositCents?: number;
-  bufferMin?: number;
-} = {}): Promise<TenantFixture> {
+export async function createTenantFixture(
+  opts: {
+    plan?: "FREE" | "PRO";
+    staffCount?: number;
+    timezone?: string;
+    depositCents?: number;
+    bufferMin?: number;
+  } = {},
+): Promise<TenantFixture> {
   seq++;
   const plan = opts.plan ?? "PRO";
   const tenant = await prisma.tenant.create({
@@ -53,8 +55,12 @@ export async function createTenantFixture(opts: {
       subscriptionStatus: plan === "PRO" ? "ACTIVE" : "NONE",
     },
   });
-  const owner = await prisma.user.create({ data: { email: `owner${seq}-${tenant.id}@example.com`, name: "Owner" } });
-  await prisma.membership.create({ data: { tenantId: tenant.id, userId: owner.id, role: "OWNER" } });
+  const owner = await prisma.user.create({
+    data: { email: `owner${seq}-${tenant.id}@example.com`, name: "Owner" },
+  });
+  await prisma.membership.create({
+    data: { tenantId: tenant.id, userId: owner.id, role: "OWNER" },
+  });
   const service = await prisma.service.create({
     data: {
       tenantId: tenant.id,
@@ -67,7 +73,9 @@ export async function createTenantFixture(opts: {
   });
   const staffIds: string[] = [];
   for (let i = 0; i < (opts.staffCount ?? 1); i++) {
-    const s = await prisma.staffMember.create({ data: { tenantId: tenant.id, name: `Staff ${i + 1}` } });
+    const s = await prisma.staffMember.create({
+      data: { tenantId: tenant.id, name: `Staff ${i + 1}` },
+    });
     staffIds.push(s.id);
     await prisma.weeklyAvailability.createMany({
       data: [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
@@ -78,7 +86,9 @@ export async function createTenantFixture(opts: {
         endMinute: 17 * 60,
       })),
     });
-    await prisma.staffService.create({ data: { tenantId: tenant.id, staffId: s.id, serviceId: service.id } });
+    await prisma.staffService.create({
+      data: { tenantId: tenant.id, staffId: s.id, serviceId: service.id },
+    });
   }
   return { tenant, serviceId: service.id, staffIds, ownerId: owner.id };
 }
@@ -88,4 +98,9 @@ export const NOW = new Date("2030-03-01T12:00:00Z");
 /** 10:00 New York time on a Monday after NOW (EST, UTC-5). */
 export const SLOT = new Date("2030-03-04T15:00:00Z");
 
-export const customer = (i = 0) => ({ name: `Customer ${i}`, email: `c${i}@example.com`, phone: "", notes: "" });
+export const customer = (i = 0) => ({
+  name: `Customer ${i}`,
+  email: `c${i}@example.com`,
+  phone: "",
+  notes: "",
+});

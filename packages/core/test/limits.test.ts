@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { checkBookingLimit, checkStaffLimit, effectivePlan, remainingBookings } from "../src/limits";
+import {
+  checkBookingLimit,
+  checkStaffLimit,
+  effectivePlan,
+  remainingBookings,
+} from "../src/limits";
 
 const now = new Date("2026-06-10T12:00:00Z");
 
@@ -36,12 +41,18 @@ describe("plan limits", () => {
 
     it("keeps PRO after cancellation until the paid period ends", () => {
       expect(effectivePlan({ ...pro, subscriptionStatus: "CANCELED" }, now)).toBe("PRO");
-      expect(effectivePlan({ ...pro, subscriptionStatus: "CANCELED" }, new Date("2026-07-02T00:00:00Z"))).toBe("FREE");
-      expect(effectivePlan({ ...pro, currentPeriodEnd: null, subscriptionStatus: "CANCELED" }, now)).toBe("FREE");
+      expect(
+        effectivePlan({ ...pro, subscriptionStatus: "CANCELED" }, new Date("2026-07-02T00:00:00Z")),
+      ).toBe("FREE");
+      expect(
+        effectivePlan({ ...pro, currentPeriodEnd: null, subscriptionStatus: "CANCELED" }, now),
+      ).toBe("FREE");
     });
 
     it("FREE is always FREE", () => {
-      expect(effectivePlan({ plan: "FREE", subscriptionStatus: "ACTIVE", currentPeriodEnd: null }, now)).toBe("FREE");
+      expect(
+        effectivePlan({ plan: "FREE", subscriptionStatus: "ACTIVE", currentPeriodEnd: null }, now),
+      ).toBe("FREE");
     });
   });
 });

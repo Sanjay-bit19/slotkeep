@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { bookingsPerWeek, noShowRate, revenueSummary, type AnalyticsBooking } from "../src/analytics";
+import {
+  bookingsPerWeek,
+  noShowRate,
+  revenueSummary,
+  type AnalyticsBooking,
+} from "../src/analytics";
 
-const row = (startAt: string, status: AnalyticsBooking["status"], dep = 1000, ref = 0, price = 5000): AnalyticsBooking => ({
+const row = (
+  startAt: string,
+  status: AnalyticsBooking["status"],
+  dep = 1000,
+  ref = 0,
+  price = 5000,
+): AnalyticsBooking => ({
   startAt: new Date(startAt),
   status,
   depositPaidCents: dep,
@@ -30,7 +41,12 @@ describe("analytics", () => {
   });
 
   it("uses local week boundaries (Sunday night in NY is Monday in UTC)", () => {
-    const weeks = bookingsPerWeek([row("2026-06-15T02:00:00Z", "CONFIRMED")], "America/New_York", 2, now);
+    const weeks = bookingsPerWeek(
+      [row("2026-06-15T02:00:00Z", "CONFIRMED")],
+      "America/New_York",
+      2,
+      now,
+    );
     expect(weeks[0]).toMatchObject({ weekStart: "2026-06-08", bookings: 1 });
   });
 

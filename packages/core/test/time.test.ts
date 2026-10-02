@@ -23,16 +23,30 @@ describe("time helpers", () => {
   });
 
   it("converts wall time to UTC across DST", () => {
-    expect(wallTimeToUtc("2026-01-15", 540, "America/New_York").toISOString()).toBe("2026-01-15T14:00:00.000Z");
-    expect(wallTimeToUtc("2026-07-15", 540, "America/New_York").toISOString()).toBe("2026-07-15T13:00:00.000Z");
-    expect(wallTimeToUtc("2026-07-15", 1440, "America/New_York").toISOString()).toBe("2026-07-16T04:00:00.000Z");
+    expect(wallTimeToUtc("2026-01-15", 540, "America/New_York").toISOString()).toBe(
+      "2026-01-15T14:00:00.000Z",
+    );
+    expect(wallTimeToUtc("2026-07-15", 540, "America/New_York").toISOString()).toBe(
+      "2026-07-15T13:00:00.000Z",
+    );
+    expect(wallTimeToUtc("2026-07-15", 1440, "America/New_York").toISOString()).toBe(
+      "2026-07-16T04:00:00.000Z",
+    );
     // Nonexistent 02:30 clamps to the moment clocks jump: 03:00 EDT.
-    expect(wallTimeToUtc("2026-03-08", 150, "America/New_York").toISOString()).toBe("2026-03-08T07:00:00.000Z");
-    expect(wallTimeToUtc("2026-03-08", 120, "America/New_York").toISOString()).toBe("2026-03-08T07:00:00.000Z");
+    expect(wallTimeToUtc("2026-03-08", 150, "America/New_York").toISOString()).toBe(
+      "2026-03-08T07:00:00.000Z",
+    );
+    expect(wallTimeToUtc("2026-03-08", 120, "America/New_York").toISOString()).toBe(
+      "2026-03-08T07:00:00.000Z",
+    );
     // 30-minute gap on Lord Howe: 02:15 clamps to 02:30 (+11) = 15:30Z previous day.
-    expect(wallTimeToUtc("2026-10-04", 135, "Australia/Lord_Howe").toISOString()).toBe("2026-10-03T15:30:00.000Z");
+    expect(wallTimeToUtc("2026-10-04", 135, "Australia/Lord_Howe").toISOString()).toBe(
+      "2026-10-03T15:30:00.000Z",
+    );
     // Ambiguous 01:30 resolves to the earlier instant (EDT).
-    expect(wallTimeToUtc("2026-11-01", 90, "America/New_York").toISOString()).toBe("2026-11-01T05:30:00.000Z");
+    expect(wallTimeToUtc("2026-11-01", 90, "America/New_York").toISOString()).toBe(
+      "2026-11-01T05:30:00.000Z",
+    );
   });
 
   it("rejects bad inputs", () => {
@@ -59,13 +73,21 @@ describe("time helpers", () => {
   });
 
   it("iterates and offsets local dates", () => {
-    expect(eachLocalDate("2026-02-27", "2026-03-02")).toEqual(["2026-02-27", "2026-02-28", "2026-03-01", "2026-03-02"]);
+    expect(eachLocalDate("2026-02-27", "2026-03-02")).toEqual([
+      "2026-02-27",
+      "2026-02-28",
+      "2026-03-01",
+      "2026-03-02",
+    ]);
     expect(eachLocalDate("2026-03-02", "2026-03-01")).toEqual([]);
     expect(addDaysToLocalDate("2026-12-31", 1)).toBe("2027-01-01");
   });
 
   it("computes month and week bounds in the tenant zone", () => {
-    const { start, end } = localMonthBounds(new Date("2026-07-01T02:00:00Z"), "America/Los_Angeles");
+    const { start, end } = localMonthBounds(
+      new Date("2026-07-01T02:00:00Z"),
+      "America/Los_Angeles",
+    );
     // Still June 30 in LA.
     expect(start.toISOString()).toBe("2026-06-01T07:00:00.000Z");
     expect(end.toISOString()).toBe("2026-07-01T07:00:00.000Z");
@@ -73,7 +95,11 @@ describe("time helpers", () => {
   });
 
   it("formats and does minute math", () => {
-    expect(formatInTimeZone(new Date("2026-06-10T13:00:00Z"), "America/New_York", "HH:mm")).toBe("09:00");
-    expect(addMinutes(new Date("2026-06-10T13:00:00Z"), 90).toISOString()).toBe("2026-06-10T14:30:00.000Z");
+    expect(formatInTimeZone(new Date("2026-06-10T13:00:00Z"), "America/New_York", "HH:mm")).toBe(
+      "09:00",
+    );
+    expect(addMinutes(new Date("2026-06-10T13:00:00Z"), 90).toISOString()).toBe(
+      "2026-06-10T14:30:00.000Z",
+    );
   });
 });

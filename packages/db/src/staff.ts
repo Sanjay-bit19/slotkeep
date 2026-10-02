@@ -42,7 +42,11 @@ async function writeStaffRelations(tx: Tx, tenantId: string, staffId: string, in
   }
 }
 
-export async function createStaffMember(tenantId: string, input: StaffInput, now = new Date()): Promise<StaffMember> {
+export async function createStaffMember(
+  tenantId: string,
+  input: StaffInput,
+  now = new Date(),
+): Promise<StaffMember> {
   return prisma.$transaction(async (tx) => {
     if (input.active) await assertStaffCapacity(tx, tenantId, now);
     const staff = await tx.staffMember.create({

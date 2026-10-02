@@ -39,9 +39,15 @@ export class TenantScopeError extends Error {
   }
 }
 
-function withTenantData<T extends Record<string, unknown>>(data: T, tenantId: string, model: string): T {
+function withTenantData<T extends Record<string, unknown>>(
+  data: T,
+  tenantId: string,
+  model: string,
+): T {
   if ("tenant" in data) {
-    throw new TenantScopeError(`${model}: use the scalar tenantId, not a tenant relation, in tenant-scoped writes`);
+    throw new TenantScopeError(
+      `${model}: use the scalar tenantId, not a tenant relation, in tenant-scoped writes`,
+    );
   }
   if (data.tenantId !== undefined && data.tenantId !== tenantId) {
     throw new TenantScopeError(`${model}: attempted to write a row for another tenant`);

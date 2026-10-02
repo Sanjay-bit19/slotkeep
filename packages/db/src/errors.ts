@@ -37,7 +37,9 @@ export class InvalidStateError extends DomainError {
 
 /** Postgres SQLSTATE 23P01: exclusion_violation (our booking_no_overlap constraint). */
 export function isExclusionViolation(err: unknown): boolean {
-  return hasPgCode(err, "23P01") || /booking_no_overlap/.test(String((err as Error)?.message ?? ""));
+  return (
+    hasPgCode(err, "23P01") || /booking_no_overlap/.test(String((err as Error)?.message ?? ""))
+  );
 }
 
 export function isUniqueViolation(err: unknown): boolean {

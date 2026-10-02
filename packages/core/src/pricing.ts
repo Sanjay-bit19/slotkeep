@@ -12,9 +12,10 @@ export function assertCents(value: number, label = "amount"): number {
 
 export function formatMoney(cents: number, currency = "usd", locale = "en-US"): string {
   assertCents(cents);
-  return new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase() }).format(
-    cents / 100,
-  );
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(cents / 100);
 }
 
 /** Parses a user-entered decimal amount ("25", "25.5", "25.50") into cents without float math. */
@@ -29,7 +30,10 @@ export function parseMoneyToCents(input: string): number {
 
 export type PricingError = "DEPOSIT_EXCEEDS_PRICE" | "DEPOSIT_BELOW_MINIMUM";
 
-export function validateServicePricing(p: { priceCents: number; depositCents: number }): PricingError | null {
+export function validateServicePricing(p: {
+  priceCents: number;
+  depositCents: number;
+}): PricingError | null {
   assertCents(p.priceCents, "priceCents");
   assertCents(p.depositCents, "depositCents");
   if (p.depositCents > p.priceCents) return "DEPOSIT_EXCEEDS_PRICE";

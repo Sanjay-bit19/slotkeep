@@ -58,13 +58,17 @@ export const MAX_RANGE_DAYS = 62;
 export function validateAvailabilityInput(input: AvailabilityInput): void {
   const { durationMin, bufferMin } = input;
   const step = input.stepMin ?? 15;
-  if (!Number.isInteger(durationMin) || durationMin <= 0) throw new RangeError("durationMin must be a positive integer");
-  if (!Number.isInteger(bufferMin) || bufferMin < 0) throw new RangeError("bufferMin must be a non-negative integer");
-  if (!Number.isInteger(step) || step <= 0) throw new RangeError("stepMin must be a positive integer");
+  if (!Number.isInteger(durationMin) || durationMin <= 0)
+    throw new RangeError("durationMin must be a positive integer");
+  if (!Number.isInteger(bufferMin) || bufferMin < 0)
+    throw new RangeError("bufferMin must be a non-negative integer");
+  if (!Number.isInteger(step) || step <= 0)
+    throw new RangeError("stepMin must be a positive integer");
   if (input.fromDate > input.toDate) throw new RangeError("fromDate must be <= toDate");
   for (const s of input.staff) {
     for (const r of s.weekly) {
-      if (!Number.isInteger(r.weekday) || r.weekday < 1 || r.weekday > 7) throw new RangeError(`Invalid weekday ${r.weekday}`);
+      if (!Number.isInteger(r.weekday) || r.weekday < 1 || r.weekday > 7)
+        throw new RangeError(`Invalid weekday ${r.weekday}`);
       if (!(r.startMinute >= 0 && r.endMinute <= 1440 && r.startMinute < r.endMinute)) {
         throw new RangeError(`Invalid weekly rule ${r.startMinute}-${r.endMinute}`);
       }
@@ -177,7 +181,12 @@ export function isSlotAvailable(input: AvailabilityInput, staffId: string, start
  * Picks a staff member for an "any staff" booking: the candidate with the fewest bookings that
  * day, ties broken by id so the choice is deterministic.
  */
-export function pickStaff(candidates: string[], bookingsToday: Record<string, number>): string | null {
+export function pickStaff(
+  candidates: string[],
+  bookingsToday: Record<string, number>,
+): string | null {
   if (candidates.length === 0) return null;
-  return [...candidates].sort((a, b) => (bookingsToday[a] ?? 0) - (bookingsToday[b] ?? 0) || a.localeCompare(b))[0]!;
+  return [...candidates].sort(
+    (a, b) => (bookingsToday[a] ?? 0) - (bookingsToday[b] ?? 0) || a.localeCompare(b),
+  )[0]!;
 }

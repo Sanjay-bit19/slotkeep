@@ -35,8 +35,12 @@ describe("pricing", () => {
   it("validates service pricing", () => {
     expect(validateServicePricing({ priceCents: 5000, depositCents: 1000 })).toBeNull();
     expect(validateServicePricing({ priceCents: 5000, depositCents: 0 })).toBeNull();
-    expect(validateServicePricing({ priceCents: 5000, depositCents: 6000 })).toBe("DEPOSIT_EXCEEDS_PRICE");
-    expect(validateServicePricing({ priceCents: 5000, depositCents: 10 })).toBe("DEPOSIT_BELOW_MINIMUM");
+    expect(validateServicePricing({ priceCents: 5000, depositCents: 6000 })).toBe(
+      "DEPOSIT_EXCEEDS_PRICE",
+    );
+    expect(validateServicePricing({ priceCents: 5000, depositCents: 10 })).toBe(
+      "DEPOSIT_BELOW_MINIMUM",
+    );
   });
 
   it("computes balance due", () => {
@@ -53,18 +57,57 @@ describe("pricing", () => {
     };
 
     it("owner cancellations always refund the remainder", () => {
-      expect(computeRefundCents({ ...base, now: new Date("2026-06-10T14:59:00Z"), initiatedBy: "OWNER" })).toBe(2000);
-      expect(computeRefundCents({ ...base, alreadyRefundedCents: 500, now: new Date(), initiatedBy: "OWNER" })).toBe(1500);
+      expect(
+        computeRefundCents({
+          ...base,
+          now: new Date("2026-06-10T14:59:00Z"),
+          initiatedBy: "OWNER",
+        }),
+      ).toBe(2000);
+      expect(
+        computeRefundCents({
+          ...base,
+          alreadyRefundedCents: 500,
+          now: new Date(),
+          initiatedBy: "OWNER",
+        }),
+      ).toBe(1500);
     });
 
     it("customer cancellations refund only outside the window (boundary inclusive)", () => {
-      expect(computeRefundCents({ ...base, now: new Date("2026-06-09T15:00:00Z"), initiatedBy: "CUSTOMER" })).toBe(2000);
-      expect(computeRefundCents({ ...base, now: new Date("2026-06-09T15:00:01Z"), initiatedBy: "CUSTOMER" })).toBe(0);
+      expect(
+        computeRefundCents({
+          ...base,
+          now: new Date("2026-06-09T15:00:00Z"),
+          initiatedBy: "CUSTOMER",
+        }),
+      ).toBe(2000);
+      expect(
+        computeRefundCents({
+          ...base,
+          now: new Date("2026-06-09T15:00:01Z"),
+          initiatedBy: "CUSTOMER",
+        }),
+      ).toBe(0);
     });
 
     it("never refunds more than remains", () => {
-      expect(computeRefundCents({ ...base, alreadyRefundedCents: 2000, now: new Date(0), initiatedBy: "OWNER" })).toBe(0);
-      expect(computeRefundCents({ ...base, depositPaidCents: 0, now: new Date(0), initiatedBy: "OWNER" })).toBe(0);
+      expect(
+        computeRefundCents({
+          ...base,
+          alreadyRefundedCents: 2000,
+          now: new Date(0),
+          initiatedBy: "OWNER",
+        }),
+      ).toBe(0);
+      expect(
+        computeRefundCents({
+          ...base,
+          depositPaidCents: 0,
+          now: new Date(0),
+          initiatedBy: "OWNER",
+        }),
+      ).toBe(0);
     });
   });
 });

@@ -37,6 +37,8 @@ export default defineConfig({
           pool: "forks",
           poolOptions: { forks: { singleFork: true } },
           testTimeout: 30_000,
+          // next-auth ships ESM with extensionless "next/server" imports; let Vite resolve them.
+          server: { deps: { inline: ["next-auth", "@auth/core"] } },
           hookTimeout: 60_000,
         },
       },

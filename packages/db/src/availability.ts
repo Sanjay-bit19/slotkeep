@@ -36,7 +36,9 @@ export interface LoadedAvailability {
  * Expired holds (PENDING_PAYMENT past holdExpiresAt) are ignored here even if the expiry job
  * has not run yet, so a stalled worker never shows phantom unavailability.
  */
-export async function loadAvailabilityInput(req: AvailabilityRequest): Promise<LoadedAvailability | null> {
+export async function loadAvailabilityInput(
+  req: AvailabilityRequest,
+): Promise<LoadedAvailability | null> {
   const db = forTenant(req.tenant.id);
   const service = await db.service.findFirst({ where: { id: req.serviceId, active: true } });
   if (!service) return null;
@@ -53,7 +55,10 @@ export async function loadAvailabilityInput(req: AvailabilityRequest): Promise<L
   const staffIds = staff.map((s) => s.id);
 
   // Pad the window by a day on each side so bookings/time off crossing local midnight count.
-  const rangeStart = localDayBounds(addDaysToLocalDate(req.fromDate, -1), req.tenant.timezone).start;
+  const rangeStart = localDayBounds(
+    addDaysToLocalDate(req.fromDate, -1),
+    req.tenant.timezone,
+  ).start;
   const rangeEnd = localDayBounds(addDaysToLocalDate(req.toDate, 1), req.tenant.timezone).end;
 
   const [rules, timeOff, bookings] = await Promise.all([
@@ -81,8 +86,12 @@ export async function loadAvailabilityInput(req: AvailabilityRequest): Promise<L
     weekly: rules
       .filter((r) => r.staffId === id)
       .map((r) => ({ weekday: r.weekday, startMinute: r.startMinute, endMinute: r.endMinute })),
-    timeOff: timeOff.filter((t) => t.staffId === id).map((t) => ({ start: t.startAt, end: t.endAt })),
-    busy: bookings.filter((b) => b.staffId === id).map((b) => ({ start: b.startAt, end: b.blockedUntil })),
+    timeOff: timeOff
+      .filter((t) => t.staffId === id)
+      .map((t) => ({ start: t.startAt, end: t.endAt })),
+    busy: bookings
+      .filter((b) => b.staffId === id)
+      .map((b) => ({ start: b.startAt, end: b.blockedUntil })),
   }));
 
   return {

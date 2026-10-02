@@ -37,10 +37,5 @@ export function isBlocking(status: BookingStatus): boolean {
   return BLOCKING_STATUSES.includes(status);
 }
 
-export const CANCEL_REASONS = [
-  "HOLD_EXPIRED",
-  "CUSTOMER",
-  "OWNER",
-  "PAYMENT_CONFLICT",
-] as const;
+export const CANCEL_REASONS = ["HOLD_EXPIRED", "CUSTOMER", "OWNER", "PAYMENT_CONFLICT"] as const;
 export type CancelReason = (typeof CANCEL_REASONS)[number];

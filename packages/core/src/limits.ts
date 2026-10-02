@@ -50,7 +50,8 @@ export function effectivePlan(state: BillingState, now: Date): Plan {
   }
 }
 
-export type LimitResult = { ok: true } | { ok: false; code: "STAFF_LIMIT" | "BOOKING_LIMIT"; limit: number };
+export type LimitResult =
+  { ok: true } | { ok: false; code: "STAFF_LIMIT" | "BOOKING_LIMIT"; limit: number };
 
 export function checkStaffLimit(plan: Plan, activeStaffCount: number): LimitResult {
   const limit = PLAN_LIMITS[plan].maxActiveStaff;

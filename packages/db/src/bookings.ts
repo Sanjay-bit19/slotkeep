@@ -11,7 +11,7 @@ import {
   toLocalDate,
   type BookingStatus,
 } from "@slotkeep/core";
-import { Prisma, type Booking, type PrismaClient } from "@prisma/client";
+import { type Prisma, type Booking, type PrismaClient } from "@prisma/client";
 import { loadAvailabilityInput } from "./availability";
 import { prisma } from "./client";
 import {
@@ -33,7 +33,14 @@ export const bookingInclude = {
   staff: { select: { id: true, name: true } },
   customer: true,
   tenant: {
-    select: { id: true, name: true, slug: true, timezone: true, brandColor: true, cancellationWindowHours: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      timezone: true,
+      brandColor: true,
+      cancellationWindowHours: true,
+    },
   },
 } satisfies Prisma.BookingInclude;
 
@@ -129,7 +136,14 @@ async function insertBooking(args: {
   tenantId: string;
   timezone: string;
   staffId: string;
-  service: { id: string; durationMin: number; bufferMin: number; priceCents: number; depositCents: number; currency: string };
+  service: {
+    id: string;
+    durationMin: number;
+    bufferMin: number;
+    priceCents: number;
+    depositCents: number;
+    currency: string;
+  };
   start: Date;
   customer: CustomerDetails;
   now: Date;
@@ -146,7 +160,11 @@ async function insertBooking(args: {
     const t = tenantRows[0];
     if (!t) throw new NotFoundError("Business");
     const plan = effectivePlan(
-      { plan: t.plan, subscriptionStatus: t.subscriptionStatus as never, currentPeriodEnd: t.currentPeriodEnd },
+      {
+        plan: t.plan,
+        subscriptionStatus: t.subscriptionStatus as never,
+        currentPeriodEnd: t.currentPeriodEnd,
+      },
       now,
     );
 
@@ -211,15 +229,14 @@ async function insertBooking(args: {
 }
 
 export async function attachCheckoutSession(bookingId: string, sessionId: string): Promise<void> {
-  await prisma.booking.update({ where: { id: bookingId }, data: { stripeCheckoutSessionId: sessionId } });
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: { stripeCheckoutSessionId: sessionId },
+  });
 }
 
 export type DepositOutcome =
-  | "CONFIRMED"
-  | "ALREADY_CONFIRMED"
-  | "REINSTATED"
-  | "CONFLICT"
-  | "NOT_FOUND";
+  "CONFIRMED" | "ALREADY_CONFIRMED" | "REINSTATED" | "CONFLICT" | "NOT_FOUND";
 
 /**
  * Applies a successful deposit payment. Called only from the Stripe webhook handler, inside the
@@ -235,7 +252,9 @@ export async function applyDepositPaid(
   tx: Tx,
   args: { bookingId: string; paymentIntentId: string | null; amountCents: number; now: Date },
 ): Promise<{ outcome: DepositOutcome; booking: Booking | null }> {
-  const rows = await tx.$queryRaw<Booking[]>`SELECT * FROM "Booking" WHERE "id" = ${args.bookingId} FOR UPDATE`;
+  const rows = await tx.$queryRaw<
+    Booking[]
+  >`SELECT * FROM "Booking" WHERE "id" = ${args.bookingId} FOR UPDATE`;
   const b = rows[0];
   if (!b) return { outcome: "NOT_FOUND", booking: null };
 
@@ -282,7 +301,10 @@ export async function applyDepositPaid(
             AND tstzrange(o."startAt", o."blockedUntil", '[)') && tstzrange(b."startAt", b."blockedUntil", '[)')
         )`;
     if (n === 1) {
-      return { outcome: "REINSTATED", booking: await tx.booking.findUnique({ where: { id: b.id } }) };
+      return {
+        outcome: "REINSTATED",
+        booking: await tx.booking.findUnique({ where: { id: b.id } }),
+      };
     }
   }
 
@@ -303,10 +325,18 @@ export async function applyDepositPaid(
  * holdExpiresAt has passed). Returns the booking either way so the caller can expire the Stripe
  * Checkout session for a hold that was released lazily by a competing booking.
  */
-export async function expireHold(bookingId: string, now: Date): Promise<{ expired: boolean; booking: Booking | null }> {
+export async function expireHold(
+  bookingId: string,
+  now: Date,
+): Promise<{ expired: boolean; booking: Booking | null }> {
   const res = await prisma.booking.updateMany({
     where: { id: bookingId, status: "PENDING_PAYMENT", holdExpiresAt: { lte: now } },
-    data: { status: "CANCELLED", cancelledAt: now, cancelReason: "HOLD_EXPIRED", tokenVersion: { increment: 1 } },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: now,
+      cancelReason: "HOLD_EXPIRED",
+      tokenVersion: { increment: 1 },
+    },
   });
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
   return { expired: res.count === 1, booking };
@@ -347,13 +377,20 @@ export async function cancelBooking(args: {
 }): Promise<CancelResult> {
   const db = forTenant(args.tenantId);
   return db.$transaction(async (tx) => {
-    const b = await tx.booking.findUnique({ where: { id: args.bookingId }, include: bookingInclude });
+    const b = await tx.booking.findUnique({
+      where: { id: args.bookingId },
+      include: bookingInclude,
+    });
     if (!b) throw new NotFoundError("Booking");
     if (args.expectedTokenVersion !== undefined && b.tokenVersion !== args.expectedTokenVersion) {
-      throw new InvalidStateError("This link is no longer valid. Use the most recent email from the business.");
+      throw new InvalidStateError(
+        "This link is no longer valid. Use the most recent email from the business.",
+      );
     }
     if (!canTransition(b.status, "CANCELLED")) {
-      throw new InvalidStateError(`A ${b.status.toLowerCase().replace("_", " ")} booking cannot be cancelled`);
+      throw new InvalidStateError(
+        `A ${b.status.toLowerCase().replace("_", " ")} booking cannot be cancelled`,
+      );
     }
     if (args.by === "CUSTOMER" && b.startAt <= args.now) {
       throw new InvalidStateError("This appointment has already started");
@@ -369,7 +406,10 @@ export async function cancelBooking(args: {
         tokenVersion: { increment: 1 },
       },
     });
-    if (res.count !== 1) throw new InvalidStateError("This booking was changed by someone else. Refresh and try again.");
+    if (res.count !== 1)
+      throw new InvalidStateError(
+        "This booking was changed by someone else. Refresh and try again.",
+      );
 
     const refundCents = computeRefundCents({
       depositPaidCents: b.depositPaidCents,
@@ -379,13 +419,20 @@ export async function cancelBooking(args: {
       cancellationWindowHours: b.tenant.cancellationWindowHours,
       initiatedBy: args.by,
     });
-    const fresh = await tx.booking.findUniqueOrThrow({ where: { id: b.id }, include: bookingInclude });
+    const fresh = await tx.booking.findUniqueOrThrow({
+      where: { id: b.id },
+      include: bookingInclude,
+    });
     return { booking: fresh, previousStatus: b.status, refundCents };
   });
 }
 
 /** Idempotent: a booking records at most one refund; replays with the same id are no-ops. */
-export async function recordRefund(bookingId: string, refundId: string, amountCents: number): Promise<boolean> {
+export async function recordRefund(
+  bookingId: string,
+  refundId: string,
+  amountCents: number,
+): Promise<boolean> {
   const res = await prisma.$executeRaw`
     UPDATE "Booking" SET "refundedCents" = LEAST("depositPaidCents", "refundedCents" + ${amountCents}),
         "stripeRefundId" = ${refundId}, "updatedAt" = now()
@@ -403,9 +450,12 @@ export async function setBookingOutcome(args: {
   const b = await db.booking.findUnique({ where: { id: args.bookingId } });
   if (!b) throw new NotFoundError("Booking");
   if (!canTransition(b.status, args.status)) {
-    throw new InvalidStateError(`Cannot mark a ${b.status.toLowerCase()} booking as ${args.status.toLowerCase()}`);
+    throw new InvalidStateError(
+      `Cannot mark a ${b.status.toLowerCase()} booking as ${args.status.toLowerCase()}`,
+    );
   }
-  if (b.startAt > args.now) throw new InvalidStateError("Outcome can only be recorded after the appointment starts");
+  if (b.startAt > args.now)
+    throw new InvalidStateError("Outcome can only be recorded after the appointment starts");
   const res = await db.booking.updateMany({
     where: { id: b.id, status: b.status },
     data: { status: args.status },
@@ -430,9 +480,12 @@ export async function rescheduleBooking(args: {
   const b = await db.booking.findUnique({ where: { id: args.bookingId }, include: bookingInclude });
   if (!b) throw new NotFoundError("Booking");
   if (args.expectedTokenVersion !== undefined && b.tokenVersion !== args.expectedTokenVersion) {
-    throw new InvalidStateError("This link is no longer valid. Use the most recent email from the business.");
+    throw new InvalidStateError(
+      "This link is no longer valid. Use the most recent email from the business.",
+    );
   }
-  if (b.status !== "CONFIRMED") throw new InvalidStateError("Only confirmed bookings can be rescheduled");
+  if (b.status !== "CONFIRMED")
+    throw new InvalidStateError("Only confirmed bookings can be rescheduled");
   const cutoff = b.startAt.getTime() - b.tenant.cancellationWindowHours * 3_600_000;
   if (args.now.getTime() > cutoff) {
     throw new InvalidStateError("It's too late to reschedule online. Please contact the business.");
@@ -448,11 +501,17 @@ export async function rescheduleBooking(args: {
     now: args.now,
     excludeBookingId: b.id,
   });
-  if (!loaded || !computeSlots(loaded.input).some((s) => s.start.getTime() === args.newStart.getTime())) {
+  if (
+    !loaded ||
+    !computeSlots(loaded.input).some((s) => s.start.getTime() === args.newStart.getTime())
+  ) {
     throw new SlotUnavailableError();
   }
 
-  const endAt = addMinutes(args.newStart, b.endAt.getTime() / 60_000 - b.startAt.getTime() / 60_000);
+  const endAt = addMinutes(
+    args.newStart,
+    b.endAt.getTime() / 60_000 - b.startAt.getTime() / 60_000,
+  );
   const blockedUntil = addMinutes(endAt, (b.blockedUntil.getTime() - b.endAt.getTime()) / 60_000);
   try {
     const res = await db.booking.updateMany({
@@ -467,6 +526,8 @@ export async function rescheduleBooking(args: {
   return db.booking.findUniqueOrThrow({ where: { id: b.id }, include: bookingInclude });
 }
 
-export async function getBookingWithRelations(bookingId: string): Promise<BookingWithRelations | null> {
+export async function getBookingWithRelations(
+  bookingId: string,
+): Promise<BookingWithRelations | null> {
   return prisma.booking.findUnique({ where: { id: bookingId }, include: bookingInclude });
 }

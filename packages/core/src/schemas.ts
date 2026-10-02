@@ -2,14 +2,38 @@ import { z } from "zod";
 import { MIN_CHARGE_CENTS } from "./pricing";
 import { ISO_DATE_RE, isValidTimeZone } from "./time";
 
+export {
+  createBookingSchema,
+  customerDetailsSchema,
+  type CreateBookingInput,
+} from "./booking-schemas";
+
 /**
  * Zod schemas shared by client forms and server handlers. The server always re-parses, so a
  * client that skips validation gains nothing.
  */
 
 export const RESERVED_SLUGS = new Set([
-  "admin", "api", "app", "auth", "b", "billing", "dashboard", "dev", "help", "login", "logout",
-  "m", "onboarding", "pricing", "settings", "signin", "signup", "static", "support", "www",
+  "admin",
+  "api",
+  "app",
+  "auth",
+  "b",
+  "billing",
+  "dashboard",
+  "dev",
+  "help",
+  "login",
+  "logout",
+  "m",
+  "onboarding",
+  "pricing",
+  "settings",
+  "signin",
+  "signup",
+  "static",
+  "support",
+  "www",
 ]);
 
 export const slugSchema = z
@@ -74,7 +98,10 @@ export const weeklyRuleSchema = z
 
 export const staffSchema = z.object({
   name: z.string().trim().min(2).max(80),
-  email: z.union([z.email(), z.literal("")]).optional().default(""),
+  email: z
+    .union([z.email(), z.literal("")])
+    .optional()
+    .default(""),
   active: z.boolean().default(true),
   serviceIds: z.array(z.string().min(1)).default([]),
   weekly: z.array(weeklyRuleSchema).max(50).default([]),
@@ -99,36 +126,13 @@ export const availabilityQuerySchema = z
   })
   .refine((q) => q.from <= q.to, { message: "from must be <= to", path: ["to"] });
 
-export const customerDetailsSchema = z.object({
-  name: z.string().trim().min(2, "Please enter your name").max(80),
-  email: z.email("Please enter a valid email").max(254).transform((e) => e.toLowerCase()),
-  phone: z
-    .string()
-    .trim()
-    .max(32)
-    .regex(/^[+()\d\s.-]*$/, "Digits, spaces and + ( ) - only")
-    .optional()
-    .default(""),
-  notes: z.string().trim().max(500).optional().default(""),
-});
-
-export const createBookingSchema = customerDetailsSchema.extend({
-  serviceId: z.string().min(1),
-  /** Omitted or "any" means the server picks a staff member. */
-  staffId: z.string().min(1).optional(),
-  start: z.iso.datetime({ offset: true }),
-});
-export type CreateBookingInput = z.infer<typeof createBookingSchema>;
-
 export const rescheduleSchema = z.object({
   token: z.string().min(10),
   start: z.iso.datetime({ offset: true }),
 });
 
 export const bookingFiltersSchema = z.object({
-  status: z
-    .enum(["PENDING_PAYMENT", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"])
-    .optional(),
+  status: z.enum(["PENDING_PAYMENT", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"]).optional(),
   staffId: z.string().optional(),
   from: localDateSchema.optional(),
   to: localDateSchema.optional(),
