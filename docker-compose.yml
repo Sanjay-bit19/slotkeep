@@ -1,0 +1,76 @@
+# Local stack: Postgres, Redis, migrations + seed, web, worker.
+#   docker compose up --build         -> http://localhost:3000
+#   docker compose up postgres redis  -> just the backing services, for `pnpm dev`
+x-app-env: &app-env
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/slotkeep?schema=public
+  REDIS_URL: redis://redis:6379
+  APP_URL: http://localhost:3000
+  INTERNAL_APP_URL: http://web:3000
+  AUTH_URL: http://localhost:3000
+  # Compose-specific names so the repo .env (dev values) is never substituted in here.
+  AUTH_SECRET: ${COMPOSE_AUTH_SECRET:-compose-local-auth-secret-change-me-0123}
+  AUTH_TRUST_HOST: "true"
+  MANAGE_TOKEN_SECRET: ${COMPOSE_MANAGE_TOKEN_SECRET:-compose-local-manage-secret-0123456789}
+  PAYMENTS_MODE: ${COMPOSE_PAYMENTS_MODE:-fake}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${COMPOSE_STRIPE_WEBHOOK_SECRET:-whsec_compose_local_secret}
+  STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}
+  RESEND_API_KEY: ${RESEND_API_KEY:-}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  # Local only: exposes email bodies (magic links) at /dev/mailbox and enables demo sign-in.
+  ENABLE_DEV_MAILBOX: "true"
+  DEMO_LOGIN_ENABLED: "true"
+  LOG_LEVEL: info
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: slotkeep
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d slotkeep"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      { context: ., target: worker, args: { NODE_IMAGE: "${NODE_IMAGE:-node:22-bookworm-slim}" } }
+    image: slotkeep-worker
+    command:
+      ["sh", "-c", "pnpm --filter @slotkeep/db migrate:deploy && pnpm --filter @slotkeep/db seed"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    build: { context: ., target: web, args: { NODE_IMAGE: "${NODE_IMAGE:-node:22-bookworm-slim}" } }
+    image: slotkeep-web
+    ports: ["3000:3000"]
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    image: slotkeep-worker
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:

@@ -1,0 +1,38 @@
+{
+  "mobile": {
+    "lighthouseVersion": "12.8.2",
+    "fetchTime": "2026-10-02T05:48:52.239Z",
+    "url": "http://localhost:3100/b/shear-bliss",
+    "scores": {
+      "performance": 99,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "metrics": {
+      "first-contentful-paint": "0.8 s",
+      "largest-contentful-paint": "2.1 s",
+      "total-blocking-time": "70 ms",
+      "cumulative-layout-shift": "0",
+      "speed-index": "0.8 s"
+    }
+  },
+  "desktop": {
+    "lighthouseVersion": "12.8.2",
+    "fetchTime": "2026-10-02T05:49:04.472Z",
+    "url": "http://localhost:3100/b/shear-bliss",
+    "scores": {
+      "performance": 100,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "metrics": {
+      "first-contentful-paint": "0.2 s",
+      "largest-contentful-paint": "0.5 s",
+      "total-blocking-time": "0 ms",
+      "cumulative-layout-shift": "0",
+      "speed-index": "0.2 s"
+    }
+  }
+}

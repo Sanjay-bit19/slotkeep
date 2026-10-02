@@ -13,3 +13,6 @@ blob-report
 .vercel
 .dev-mail
 loadtest/results/*.json
+*.tsbuildinfo
+dump.rdb
+*.rdb

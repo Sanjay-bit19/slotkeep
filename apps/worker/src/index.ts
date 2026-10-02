@@ -10,6 +10,7 @@ import {
   logger,
   QUEUE_NAMES,
   redis,
+  releaseName,
   type EmailJob,
   type HoldJob,
   type JobMeta,
@@ -25,7 +26,7 @@ import { processRefundJob } from "./processors/payments";
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    release: process.env.SENTRY_RELEASE || undefined,
+    release: releaseName(),
     environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
     tracesSampleRate: 0.1,
   });

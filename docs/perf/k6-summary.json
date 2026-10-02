@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-10-02T05:59:07.534516Z",
+  "environment": "Single 4 vCPU / 15 GB cloud container running k6, Next.js production server (1 process), worker, PostgreSQL 16 and Redis 7 together. Fake payment gateway. Rate limiting disabled for the run (all traffic comes from one IP).",
+  "k6": "v1.3.0",
+  "availability_50vus": {
+    "p50_ms": 217.1,
+    "p95_ms": 274.8,
+    "p99_ms": 303.3,
+    "requests": 17955,
+    "req_per_s": 211.2,
+    "error_rate": 0
+  },
+  "availability_5vus": {
+    "p50_ms": 23.2,
+    "p95_ms": 33.0,
+    "p99_ms": 38.7,
+    "requests": 6831,
+    "req_per_s": 195.1,
+    "error_rate": 0
+  },
+  "booking_10_per_s": {
+    "p50_ms": 28.0,
+    "p95_ms": 34.8,
+    "p99_ms": 43.0,
+    "requests": 1055,
+    "req_per_s": 17.6,
+    "error_rate": 0,
+    "bookings_created": 454,
+    "iterations_no_open_slot": 147
+  },
+  "contention_30vus_one_day": {
+    "p50_ms": 239.4,
+    "p95_ms": 371.8,
+    "p99_ms": 386.1,
+    "requests": 4066,
+    "req_per_s": 202.4,
+    "error_rate": 0,
+    "bookings_created": 13,
+    "booking_conflicts_409": 233
+  }
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@slotkeep/db";
-import { redis } from "@slotkeep/infra";
+import { redis, releaseName } from "@slotkeep/infra";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export async function GET() {
   return NextResponse.json(
     {
       status: ok ? "ok" : "degraded",
-      release: process.env.SENTRY_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA || "dev",
+      release: releaseName() ?? "dev",
       checks: { database, redis: cache },
       time: new Date().toISOString(),
     },

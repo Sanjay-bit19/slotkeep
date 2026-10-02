@@ -84,11 +84,9 @@ test.describe.serial("customer booking and owner refund", () => {
     });
     await page.goto("/b/shear-bliss");
     await page.getByText("Women's Cut & Style").click();
-    await page
-      .getByLabel("Who with?")
-      .selectOption({
-        label: (await db.staffMember.findUniqueOrThrow({ where: { id: booking.staffId } })).name,
-      });
+    await page.getByLabel("Who with?").selectOption({
+      label: (await db.staffMember.findUniqueOrThrow({ where: { id: booking.staffId } })).name,
+    });
     await page
       .getByRole("radiogroup", { name: "Date" })
       .getByRole("radio")

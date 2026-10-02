@@ -1,0 +1,46 @@
+# Render blueprint: background worker + Redis. The web app deploys to Vercel and Postgres to Neon.
+# Secrets marked `sync: false` are entered in the Render dashboard.
+services:
+  - type: worker
+    name: slotkeep-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: node --enable-source-maps apps/worker/dist/index.js
+    # Migrations run here (once per deploy), never from Vercel preview builds.
+    preDeployCommand: pnpm --filter @slotkeep/db migrate:deploy
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: slotkeep-redis, property: connectionString }
+      - key: APP_URL
+        sync: false
+      - key: MANAGE_TOKEN_SECRET
+        sync: false
+      - key: PAYMENTS_MODE
+        value: stripe
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: keyvalue
+    name: slotkeep-redis
+    plan: starter
+    # BullMQ needs keys to survive memory pressure: never evict.
+    maxmemoryPolicy: noeviction
+    # Vercel functions (rate limiter, queue producer) must reach Redis from outside Render.
+    # External connections are TLS + password; narrow this list if you use static egress IPs.
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: vercel
