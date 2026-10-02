@@ -153,20 +153,16 @@ export async function cancelBookingAction(
   bookingId: string,
   _p: ActionResult | null,
 ): Promise<ActionResult> {
+  let refundStatus = "none";
   const res = await runAction("cancelBooking", async () => {
     const ctx = await requireTenant(slug, "booking:cancel");
     const { log, requestId } = await actionLogger({ tenantId: ctx.tenant.id, userId: ctx.user.id });
-    const out = await cancelAsOwner(ctx, bookingId, log, { requestId });
-    const msg =
-      out.refundStatus === "refunded"
-        ? `Booking cancelled and $${(out.refundCents / 100).toFixed(2)} refunded.`
-        : out.refundStatus === "pending"
-          ? "Booking cancelled. The refund is being retried and will complete shortly."
-          : "Booking cancelled.";
-    return { ok: true, message: msg } as const;
+    refundStatus = (await cancelAsOwner(ctx, bookingId, log, { requestId })).refundStatus;
   });
-  revalidatePath(`/dashboard/${slug}/bookings/${bookingId}`);
-  return res;
+  if (!res.ok) return res;
+  revalidatePath(`/dashboard/${slug}/bookings`);
+  // A fixed notice code, never free text, so a crafted link can't display arbitrary messages.
+  redirect(`/dashboard/${slug}/bookings/${bookingId}?notice=cancelled-${refundStatus}`);
 }
 
 export async function saveSettings(

@@ -1,9 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { POLICIES, rateLimit } from "@slotkeep/infra";
+import { redirect } from "next/navigation";
+import { manageUrlFor, POLICIES, rateLimit } from "@slotkeep/infra";
 import { headers } from "next/headers";
-import { formatInTimeZone } from "@slotkeep/core";
 import { runAction, type ActionResult } from "@/lib/actions";
 import { actionLogger } from "@/lib/request";
 import { cancelAsCustomer, rescheduleAsCustomer } from "@/lib/services/manage-bookings";
@@ -38,18 +37,17 @@ export async function customerReschedule(
   _p: ActionResult | null,
   fd: FormData,
 ): Promise<ActionResult> {
+  let nextPath = "";
   const res = await runAction("customerReschedule", async () => {
     if (await limited())
       return { ok: false, error: "Too many requests. Try again shortly." } as const;
     const start = new Date(String(fd.get("start") ?? ""));
     if (Number.isNaN(start.getTime())) return { ok: false, error: "Pick a new time" } as const;
     const { log, requestId } = await actionLogger();
-    const b = await rescheduleAsCustomer(token, start, log, { requestId });
-    return {
-      ok: true,
-      message: `Moved to ${formatInTimeZone(b.startAt, b.tenant.timezone, "cccc, LLLL d 'at' h:mm a")}. We've emailed you an updated confirmation with a new link.`,
-    } as const;
+    const updated = await rescheduleAsCustomer(token, start, log, { requestId });
+    // Rescheduling revokes the old link; send the customer straight to their new one.
+    nextPath = new URL(manageUrlFor(updated)).pathname;
   });
-  revalidatePath(`/m/${token}`);
-  return res;
+  if (!res.ok) return res;
+  redirect(`${nextPath}?notice=rescheduled`);
 }

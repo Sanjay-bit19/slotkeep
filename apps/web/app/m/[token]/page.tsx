@@ -8,8 +8,15 @@ import { customerCancel, customerReschedule } from "./actions";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage your booking", robots: { index: false } };
 
-export default async function ManagePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function ManagePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ notice?: string }>;
+}) {
   const { token: raw } = await params;
+  const { notice } = await searchParams;
   const token = decodeURIComponent(raw);
   let data: Awaited<ReturnType<typeof bookingFromToken>> | null = null;
   let error: string | null = null;
@@ -53,6 +60,15 @@ export default async function ManagePage({ params }: { params: Promise<{ token: 
       <main id="main" className="mx-auto max-w-2xl px-5 py-12">
         <p className="text-sm text-slate-600">{b.tenant.name}</p>
         <h1 className="text-2xl font-bold text-slate-900">Your booking</h1>
+        {notice === "rescheduled" && current && (
+          <p
+            role="status"
+            className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+          >
+            Your booking has been moved. We&apos;ve emailed you an updated confirmation; links in
+            older emails no longer work.
+          </p>
+        )}
         <div className="mt-4 rounded-xl bg-white p-6 shadow-sm">
           <dl className="grid grid-cols-[7rem_1fr] gap-y-2 text-sm">
             <dt className="text-slate-600">Status</dt>

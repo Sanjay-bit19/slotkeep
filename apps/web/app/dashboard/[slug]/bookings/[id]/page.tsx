@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { balanceDueCents, canTransition, formatInTimeZone, formatMoney } from "@slotkeep/core";
 import { CancelBookingForm, OutcomeButtons } from "@/components/booking-actions";
+import { Alert } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { can } from "@/lib/authz";
@@ -11,12 +12,22 @@ import { cancelBookingAction, markOutcomeAction } from "../../actions";
 
 export const metadata = { title: "Booking" };
 
+const NOTICES: Record<string, (refunded: string) => string> = {
+  "cancelled-refunded": (r) => `Booking cancelled and ${r} refunded.`,
+  "cancelled-pending": () =>
+    "Booking cancelled. The refund is being retried and will complete shortly.",
+  "cancelled-none": () => "Booking cancelled.",
+};
+
 export default async function BookingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
   const { slug, id } = await params;
+  const { notice } = await searchParams;
   const ctx = await pageTenant(slug, "booking:read");
   const b = await bookingDetail(ctx, id);
   if (!b) notFound();
@@ -60,6 +71,9 @@ export default async function BookingDetailPage({
         ← All bookings
       </Link>
       <h1 className="text-2xl font-bold text-slate-900">Booking for {b.customer.name}</h1>
+      {notice && NOTICES[notice] && (
+        <Alert variant="success">{NOTICES[notice](formatMoney(b.refundedCents, b.currency))}</Alert>
+      )}
       <Card>
         <CardContent className="pt-6">
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-[12rem_1fr]">

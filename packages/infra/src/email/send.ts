@@ -67,8 +67,9 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 }
 
 async function upsertLog(input: SendEmailInput, status: string, providerId?: string) {
-  const body =
-    env().NODE_ENV === "production" ? null : `${input.text}\n\n<!--html-->\n${input.html}`;
+  // Bodies (which can contain magic links) are only stored for local dev and CI e2e runs.
+  const storeBodies = env().NODE_ENV !== "production" || process.env.ENABLE_DEV_MAILBOX === "true";
+  const body = storeBodies ? `${input.text}\n\n<!--html-->\n${input.html}` : null;
   const data = {
     tenantId: input.tenantId ?? null,
     bookingId: input.bookingId ?? null,
