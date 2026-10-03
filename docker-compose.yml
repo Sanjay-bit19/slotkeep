@@ -52,6 +52,8 @@ services:
     build:
       { context: ., target: worker, args: { NODE_IMAGE: "${NODE_IMAGE:-node:22-bookworm-slim}" } }
     image: slotkeep-worker
+    # These images exist only locally: always build them, never pull from Docker Hub.
+    pull_policy: build
     command:
       ["sh", "-c", "pnpm --filter @slotkeep/db migrate:deploy && pnpm --filter @slotkeep/db seed"]
     environment: *app-env
@@ -61,6 +63,7 @@ services:
   web:
     build: { context: ., target: web, args: { NODE_IMAGE: "${NODE_IMAGE:-node:22-bookworm-slim}" } }
     image: slotkeep-web
+    pull_policy: build
     ports: ["3000:3000"]
     environment: *app-env
     depends_on:
@@ -68,7 +71,10 @@ services:
       redis: { condition: service_healthy }
 
   worker:
+    build:
+      { context: ., target: worker, args: { NODE_IMAGE: "${NODE_IMAGE:-node:22-bookworm-slim}" } }
     image: slotkeep-worker
+    pull_policy: build
     environment: *app-env
     depends_on:
       migrate: { condition: service_completed_successfully }
