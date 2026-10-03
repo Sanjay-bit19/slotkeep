@@ -16,6 +16,8 @@ x-app-env: &app-env
   STRIPE_WEBHOOK_SECRET: ${COMPOSE_STRIPE_WEBHOOK_SECRET:-whsec_compose_local_secret}
   STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}
   RESEND_API_KEY: ${RESEND_API_KEY:-}
+  # Without a verified domain, Resend only accepts onboarding@resend.dev as the sender.
+  EMAIL_FROM: ${EMAIL_FROM:-SlotKeep <onboarding@resend.dev>}
   SENTRY_DSN: ${SENTRY_DSN:-}
   # Local only: exposes email bodies (magic links) at /dev/mailbox and enables demo sign-in.
   ENABLE_DEV_MAILBOX: "true"
