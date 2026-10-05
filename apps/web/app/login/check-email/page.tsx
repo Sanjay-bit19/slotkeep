@@ -1,10 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { devMailboxEnabled } from "@/lib/dev";
 
 export const metadata = { title: "Check your email" };
 
+// Rendered per request: ENABLE_DEV_MAILBOX is a runtime setting (Docker passes it in after the
+// image is built), so a build-time prerender would bake in the wrong answer.
+export const dynamic = "force-dynamic";
+
 export default function CheckEmail() {
-  const devMailbox =
-    process.env.NODE_ENV !== "production" || process.env.ENABLE_DEV_MAILBOX === "true";
+  const devMailbox = devMailboxEnabled();
   return (
     <main id="main" className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <Card>
