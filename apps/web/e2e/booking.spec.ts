@@ -37,7 +37,9 @@ test.describe.serial("customer booking and owner refund", () => {
   }) => {
     await page.goto("/b/shear-bliss");
     await page.getByText("Women's Cut & Style").click();
-    bookedDateIndex = await pickDayWithSlots(page);
+    // Start two days out so the booking is always outside the 24h reschedule/refund window,
+    // whatever time of day the suite runs.
+    bookedDateIndex = await pickDayWithSlots(page, 2);
     const firstSlot = page
       .getByRole("radiogroup", { name: "Available times" })
       .getByRole("radio")
