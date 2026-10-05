@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
-@theme {
+/*
+ * `inline` makes utilities like bg-brand emit `var(--brand)` directly. Without it they emit
+ * `var(--color-brand)`, which is resolved once on :root, so a business's own --brand set on a
+ * wrapper element (booking page, dashboard) would be ignored and everything stays indigo.
+ */
+@theme inline {
   --color-brand: var(--brand, #4f46e5);
   --color-brand-foreground: #ffffff;
   --font-sans:

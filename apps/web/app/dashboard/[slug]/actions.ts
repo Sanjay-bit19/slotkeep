@@ -51,6 +51,7 @@ export async function saveService(
   });
   if (res.ok) {
     revalidatePath(`/dashboard/${slug}/services`);
+    revalidatePath(`/b/${slug}`);
     redirect(`/dashboard/${slug}/services?saved=1`);
   }
   return res;
@@ -93,6 +94,7 @@ export async function saveStaff(
   });
   if (res.ok) {
     revalidatePath(`/dashboard/${slug}/staff`);
+    revalidatePath(`/b/${slug}`);
     redirect(`/dashboard/${slug}/staff?saved=1`);
   }
   return res;
@@ -181,6 +183,8 @@ export async function saveSettings(
     return { ok: true, message: "Settings saved" } as const;
   });
   revalidatePath(`/dashboard/${slug}`, "layout");
+  // The public booking page is cached (ISR); name, color and timezone changes must show at once.
+  revalidatePath(`/b/${slug}`);
   return res;
 }
 

@@ -96,8 +96,14 @@ test("customer reschedules from the email link; the old link stops working", asy
   const before = await db.booking.findFirstOrThrow({ where: { customer: { email } } });
 
   await page.goto(manageUrl);
-  await page.getByRole("radiogroup", { name: "New date" }).getByRole("radio").nth(5).click();
+  // Pick the first later date with open times (the salon is closed some weekdays).
+  const newDates = page.getByRole("radiogroup", { name: "New date" }).getByRole("radio");
   const times = page.getByRole("radiogroup", { name: "New time" }).getByRole("radio");
+  for (let i = 4; i < 14; i++) {
+    await newDates.nth(i).click();
+    await expect(page.getByText("Loading…")).toBeHidden();
+    if ((await times.count()) > 0) break;
+  }
   await expect(times.first()).toBeVisible();
   await times.last().click();
   await page.getByRole("button", { name: "Move my booking" }).click();
