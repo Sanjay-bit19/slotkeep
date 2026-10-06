@@ -21,8 +21,10 @@ services:
         sync: false
       - key: MANAGE_TOKEN_SECRET
         sync: false
+      # "fake" = built-in payment simulator (no Stripe account needed). Switch to "stripe" once
+      # STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are set, on both Render and Vercel.
       - key: PAYMENTS_MODE
-        value: stripe
+        value: fake
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
@@ -30,7 +32,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
-        sync: false
+        value: "SlotKeep <onboarding@resend.dev>"
       - key: SENTRY_DSN
         sync: false
 
