@@ -3,6 +3,8 @@
 services:
   - type: worker
     name: slotkeep-worker
+    # Same AWS region as the Neon database (us-east-2) to keep query latency low.
+    region: ohio
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -38,6 +40,7 @@ services:
 
   - type: keyvalue
     name: slotkeep-redis
+    region: ohio
     plan: starter
     # BullMQ needs keys to survive memory pressure: never evict.
     maxmemoryPolicy: noeviction
