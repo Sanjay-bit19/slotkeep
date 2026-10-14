@@ -1,17 +1,29 @@
-# Render blueprint: background worker + Redis. The web app deploys to Vercel and Postgres to Neon.
-# Secrets marked `sync: false` are entered in the Render dashboard.
+# Render blueprint: background worker + Redis, on Render's free instance types. The web app
+# deploys to Vercel and Postgres to Neon. Secrets marked `sync: false` are entered in the Render
+# dashboard.
+#
+# Render has no free background workers, so the worker runs as a free web service: its HTTP
+# server only answers health checks. Free web services spin down after 15 minutes without inbound
+# requests, so point an uptime monitor (e.g. UptimeRobot, every 5 minutes) at /live to keep it
+# processing jobs. Jobs enqueued while it sleeps wait in Redis. For an always-on worker, change it
+# to `type: worker` with `plan: starter` and move migrations back to `preDeployCommand`.
 services:
-  - type: worker
+  - type: web
     name: slotkeep-worker
     # Same AWS region as the Neon database (us-east-2) to keep query latency low.
     region: ohio
+    plan: free
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: node --enable-source-maps apps/worker/dist/index.js
-    # Migrations run here (once per deploy), never from Vercel preview builds.
-    preDeployCommand: pnpm --filter @slotkeep/db migrate:deploy
-    plan: starter
+    # Pre-deploy commands need a paid instance, so migrations run at startup. `prisma migrate
+    # deploy` takes an advisory lock and is a no-op when the schema is current. Migrations never
+    # run from Vercel builds.
+    dockerCommand: >-
+      sh -c "pnpm --filter @slotkeep/db migrate:deploy &&
+      exec node --enable-source-maps apps/worker/dist/index.js"
+    # /live answers without querying Postgres, so health checks don't keep Neon awake.
+    healthCheckPath: /live
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,15 +33,15 @@ services:
         fromService: { type: keyvalue, name: slotkeep-redis, property: connectionString }
       - key: APP_URL
         sync: false
+      # Copy this generated value to Vercel: the worker signs the self-service links in emails and
+      # the web app verifies them.
       - key: MANAGE_TOKEN_SECRET
-        sync: false
+        generateValue: true
       # "fake" = built-in payment simulator (no Stripe account needed). Switch to "stripe" once
       # STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are set, on both Render and Vercel.
       - key: PAYMENTS_MODE
         value: fake
       - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: RESEND_API_KEY
         sync: false
@@ -37,11 +49,18 @@ services:
         value: "SlotKeep <onboarding@resend.dev>"
       - key: SENTRY_DSN
         sync: false
+      # Neon's free compute suspends after 5 idle minutes and has a monthly compute-hour budget.
+      # A minutely sweep would keep it awake around the clock; hourly lets it sleep. Expired holds
+      # never block a slot meanwhile (availability ignores them, booking releases them lazily).
+      - key: HOLD_SWEEP_EVERY_MS
+        value: "3600000"
 
   - type: keyvalue
     name: slotkeep-redis
     region: ohio
-    plan: starter
+    # Free: 25 MB, no persistence. Jobs queued at the moment of a restart are lost; the hold
+    # sweeper and lazy release cover holds. Use `starter` for a persistent instance.
+    plan: free
     # BullMQ needs keys to survive memory pressure: never evict.
     maxmemoryPolicy: noeviction
     # Vercel functions (rate limiter, queue producer) must reach Redis from outside Render.

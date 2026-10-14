@@ -21,6 +21,12 @@ const schema = z.object({
     .transform((v) => v === "true"),
   SENTRY_DSN: z.string().optional().default(""),
   SENTRY_RELEASE: z.string().optional().default(""),
+  /**
+   * How often the worker sweeps overdue holds. Each sweep queries Postgres, so on a serverless
+   * database that suspends when idle (Neon free) a long interval lets it sleep. Expired holds never
+   * block a slot either way: availability ignores them and booking releases them lazily.
+   */
+  HOLD_SWEEP_EVERY_MS: z.coerce.number().int().min(10_000).default(60_000),
 });
 
 export type Env = z.infer<typeof schema>;
