@@ -18,10 +18,8 @@ services:
     dockerContext: .
     # Pre-deploy commands need a paid instance, so migrations run at startup. `prisma migrate
     # deploy` takes an advisory lock and is a no-op when the schema is current. Migrations never
-    # run from Vercel builds.
-    dockerCommand: >-
-      sh -c "pnpm --filter @slotkeep/db migrate:deploy &&
-      exec node --enable-source-maps apps/worker/dist/index.js"
+    # run from Vercel builds. Keep this free of quotes: Render passes them through literally.
+    dockerCommand: sh apps/worker/start-with-migrations.sh
     # /live answers without querying Postgres, so health checks don't keep Neon awake.
     healthCheckPath: /live
     envVars:
