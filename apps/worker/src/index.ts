@@ -6,6 +6,7 @@ import {
   closeQueues,
   closeRedis,
   createRedis,
+  env,
   getQueue,
   logger,
   QUEUE_NAMES,
@@ -81,7 +82,7 @@ async function main() {
   const maintenance = getQueue<MaintenanceJob>(QUEUE_NAMES.maintenance);
   await maintenance.upsertJobScheduler(
     "sweep-holds",
-    { every: 60_000 },
+    { every: env().HOLD_SWEEP_EVERY_MS },
     { name: "sweep-holds", data: { kind: "sweep-holds" } },
   );
   await maintenance.upsertJobScheduler(
@@ -90,9 +91,14 @@ async function main() {
     { name: "daily-summaries", data: { kind: "daily-summaries" } },
   );
 
-  // Minimal health endpoint for Railway/Render.
+  // Health endpoints for Railway/Render. /health checks Postgres and Redis; /live answers without
+  // touching either, for keep-alive pings that must not wake a suspended serverless database.
   const port = Number(process.env.PORT ?? process.env.WORKER_HEALTH_PORT ?? 3001);
   const server = createServer(async (req, res) => {
+    if (req.url === "/live") {
+      res.writeHead(200, { "content-type": "application/json" }).end('{"status":"ok"}');
+      return;
+    }
     if (req.url !== "/health") {
       res.writeHead(404).end();
       return;

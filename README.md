@@ -382,19 +382,26 @@ focus rings, reduced-motion support, and a screen-reader table behind each analy
   request to the confirmation email.
 - **`GET /api/health`** checks Postgres (`SELECT 1`) and Redis (`PING`) with timeouts, and
   returns 200 or 503 with per-dependency latency and the release. The worker exposes
-  `GET /health` on `WORKER_HEALTH_PORT` for Render and Railway.
+  `GET /health` (same checks) and `GET /live` (process only, for keep-alive pings) on `PORT`
+  or `WORKER_HEALTH_PORT`.
 - Every email is recorded in `EmailLog` (status, provider id, dedupe key).
 
 ## Deployment
 
 The target topology is web on **Vercel**, worker and Redis on **Render** (`render.yaml`
-blueprint) or Railway, and Postgres on **Neon**.
+blueprint), and Postgres on **Neon**. The blueprint uses only free instance types.
 
-1. **Neon:** create a database; use the pooled connection string for `DATABASE_URL`.
+1. **Neon:** create a database and copy the direct (non-pooled) connection string for
+   `DATABASE_URL`. Migrations need a direct connection.
 2. **Render:** "New Blueprint" from this repo. It creates the worker (Docker, `worker` target)
-   and a Redis instance with `maxmemory-policy noeviction` (BullMQ requires it). The worker's
-   `preDeployCommand` runs `prisma migrate deploy`, so migrations run once per deploy, never from
-   Vercel preview builds.
+   and a Redis instance with `maxmemory-policy noeviction` (BullMQ requires it). Render has no
+   free background workers, so the worker runs as a free web service whose HTTP server only
+   answers `/health` and `/live`. It runs `prisma migrate deploy` on startup (a no-op when the
+   schema is current), so migrations never run from Vercel preview builds. Free web services
+   spin down after 15 idle minutes: point an uptime monitor at `/live` every 5 minutes so jobs
+   keep flowing. `/live` doesn't query Postgres, and `HOLD_SWEEP_EVERY_MS=3600000` makes the
+   hold sweeper hourly, so Neon's free compute can still suspend when idle. For an always-on
+   worker, switch to `type: worker`, `plan: starter` and a `preDeployCommand` for migrations.
 3. **Vercel:** import the repo with root directory `apps/web` (`vercel.json` sets the install
    and build commands). Set the same env vars, with `PAYMENTS_MODE=stripe`, a real `APP_URL`,
    `AUTH_URL`, and a strong `AUTH_SECRET` and `MANAGE_TOKEN_SECRET`.
