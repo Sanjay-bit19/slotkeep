@@ -10,11 +10,20 @@ The project prioritises correctness, tests and observability over feature count.
 this README comes from an actual run. The environment and the date of each run are stated next
 to it.
 
-> **Live demo:** not deployed yet. Deploying needs Vercel, Neon and Render accounts plus Stripe
-> and Resend keys, which this repository doesn't hold. Everything is ready for it: see
-> [Deployment](#deployment). To try it locally in one command, see
-> [Quick start (Docker)](#quick-start-docker). The demo accounts are listed under
-> [Demo accounts](#demo-accounts).
+> **Live demo: https://slotkeep.vercel.app**
+>
+> - Public booking page: [/b/shear-bliss](https://slotkeep.vercel.app/b/shear-bliss). Payments
+>   use the built-in simulator, so no card is needed.
+> - Owner dashboard: [/login](https://slotkeep.vercel.app/login), then **Salon owner** (one-click
+>   demo sign-in, no email needed).
+> - Runs entirely on free tiers: web on Vercel, worker and Redis on Render, Postgres on Neon.
+>   Emails go through Resend's test sender, which only delivers to the account owner, so
+>   confirmation emails to other addresses are not delivered.
+>
+> Verified end to end on 2026-10-17: booking, simulated payment, confirmation email from the
+> worker, self-service reschedule via the signed email link, owner cancellation with a $10.00
+> refund, and the cancellation email. To run it locally instead, see
+> [Quick start (Docker)](#quick-start-docker).
 
 ---
 
@@ -423,7 +432,9 @@ image is `node:22-bookworm-slim`.)
 
 ## Known limitations and next steps
 
-- **No live deployment** yet (see the top of this README).
+- The live demo uses **free tiers**: the worker spins down when idle unless an uptime monitor
+  keeps pinging `/live`, Redis has no persistence, and Resend's test sender only delivers to the
+  account owner. A verified sending domain would lift the email limit.
 - The **real-Stripe e2e path** is implemented but has only run against the simulator here.
 - Staff hours UI edits one window per day; the data model and engine support split shifts.
 - Customers can reschedule only to slots with the same staff member.
